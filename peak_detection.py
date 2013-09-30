@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import essentia.standard as es
 import numpy as np
 
 #the following two functions are taken from: 
@@ -164,7 +163,7 @@ def nearest_ji(et_interval):
     index = find_nearest_index(ji_intervals, et_interval)
     return ji_intervals[index]
 
-def peaks_by_slope(y, x, lookahead=20, delta=0.00003, 
+def _peaks_by_slope(y, x, lookahead=20, delta=0.00003, 
                   average_hist=False, ref_peaks=None, ref_thresh=25):
     # In the average histogram, we get the ref_peaks and ref_valleys which are
     # then used to clean the peaks we get from a single performance. For
@@ -213,7 +212,6 @@ def peaks_by_slope(y, x, lookahead=20, delta=0.00003,
                 y_clean_peaks.append(y_peaks[peak_location_index])
         return {"peaks": [x_clean_peaks, y_clean_peaks], "valleys": [x_valleys, y_valleys]}
 
-
 def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=0.00003):
     """
     This function expects smoothed histogram (i.e., y).
@@ -241,8 +239,8 @@ def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=
 
     if method == "slope" or method == "hybrid":
         peaks = {}
-        peak_info = peaks_by_slope(
-            y, x, lookahead=20, delta=valley_thresh, average_hist=True)
+        peak_info = _peaks_by_slope(y, x, lookahead=20, 
+                    delta=valley_thresh, average_hist=True)
 
         # find correspondences between peaks and valleys, and set valleys are left and right Indices
         # see the other method(s) for clarity!
@@ -377,7 +375,6 @@ def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=
         return {'peaks': [x[peaks.keys()], temp1], 'valleys': [x[valleys.keys()], valleys.values()]}
     else:
         return {'peaks': [[], []], 'valleys': [[], []]}
-
 
 def extend_peaks(src_peaks, prop_thresh=30):
     """Each peak in src_peaks is checked for its presence in other octaves. If it does not exist, it is created. prop_thresh is the cent range within which the peak in the other octave is expected to be present, i.e., only if there is a peak within this cent range in other octaves, then the peak is considered to be present in that octave.
