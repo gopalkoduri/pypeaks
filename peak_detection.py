@@ -137,16 +137,16 @@ def find_nearest_index(arr, value):
     index = (np.abs(arr - value)).argmin()
     return index
 
-def next_ji(curJI):
+def next_ji(cur_ji):
     ji_intervals = np.array([-1200, -1089, -997, -885, -814, -702, -591, 
                    -499, -387, -316, -204, -112, 0, 111, 203, 315, 386, 
                    498, 609, 701, 813, 884, 996, 1088, 1200, 1311, 1403, 
                    1515, 1586, 1698, 1809, 1901, 2013, 2084, 2196, 2288, 
                    2400, 2511, 2603, 2715, 2786, 2898, 3009, 3101, 3213, 
                    3284, 3396, 3488, 3600])
-    curIndex = np.where(ji_intervals == curJI)
-    if curIndex[0][0] + 1 < len(ji_intervals):
-        return ji_intervals[curIndex[0][0] + 1]
+    cur_index = np.where(ji_intervals == cur_ji)
+    if cur_index[0][0] + 1 < len(ji_intervals):
+        return ji_intervals[cur_index[0][0] + 1]
     else:
         raise IndexError("Increase number of octaves in ji_intervals!")
 
@@ -377,7 +377,11 @@ def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=
         return {'peaks': [[], []], 'valleys': [[], []]}
 
 def extend_peaks(src_peaks, prop_thresh=30):
-    """Each peak in src_peaks is checked for its presence in other octaves. If it does not exist, it is created. prop_thresh is the cent range within which the peak in the other octave is expected to be present, i.e., only if there is a peak within this cent range in other octaves, then the peak is considered to be present in that octave.
+    """Each peak in src_peaks is checked for its presence in other octaves.
+    If it does not exist, it is created. prop_thresh is the cent range within
+    which the peak in the other octave is expected to be present, i.e., only
+    if there is a peak within this cent range in other octaves, then the peak
+    is considered to be present in that octave.
     """
     # octave propagation of the reference peaks
     temp_peaks = [i + 1200 for i in src_peaks["peaks"][0]]
