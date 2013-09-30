@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+from intervals import Intervals
 
 #the following two functions are taken from: 
 #https://gist.github.com/1178136
@@ -137,32 +138,6 @@ def find_nearest_index(arr, value):
     index = (np.abs(arr - value)).argmin()
     return index
 
-def next_ji(cur_ji):
-    ji_intervals = np.array([-1200, -1089, -997, -885, -814, -702, -591, 
-                   -499, -387, -316, -204, -112, 0, 111, 203, 315, 386, 
-                   498, 609, 701, 813, 884, 996, 1088, 1200, 1311, 1403, 
-                   1515, 1586, 1698, 1809, 1901, 2013, 2084, 2196, 2288, 
-                   2400, 2511, 2603, 2715, 2786, 2898, 3009, 3101, 3213, 
-                   3284, 3396, 3488, 3600])
-    cur_index = np.where(ji_intervals == cur_ji)
-    if cur_index[0][0] + 1 < len(ji_intervals):
-        return ji_intervals[cur_index[0][0] + 1]
-    else:
-        raise IndexError("Increase number of octaves in ji_intervals!")
-
-def nearest_ji(et_interval):
-    ji_intervals = np.array([-1200, -1089, -997, -885, -814, -702, -591, 
-                   -499, -387, -316, -204, -112, 0, 111, 203, 315, 386, 
-                   498, 609, 701, 813, 884, 996, 1088, 1200, 1311, 1403, 
-                   1515, 1586, 1698, 1809, 1901, 2013, 2084, 2196, 2288, 
-                   2400, 2511, 2603, 2715, 2786, 2898, 3009, 3101, 3213, 
-                   3284, 3396, 3488, 3600])
-    if et_intervals < ji_intervals[0] - 25 or et_interval > ji_intervals[-1] + 25:
-        raise IndexError("Increase number of octaves in ji_intervals!")
-
-    index = find_nearest_index(ji_intervals, et_interval)
-    return ji_intervals[index]
-
 def _peaks_by_slope(y, x, lookahead=20, delta=0.00003, 
                   average_hist=False, ref_peaks=None, ref_thresh=25):
     # In the average histogram, we get the ref_peaks and ref_valleys which are
@@ -212,9 +187,9 @@ def _peaks_by_slope(y, x, lookahead=20, delta=0.00003,
                 y_clean_peaks.append(y_peaks[peak_location_index])
         return {"peaks": [x_clean_peaks, y_clean_peaks], "valleys": [x_valleys, y_valleys]}
 
-def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=0.00003):
+def peaks(x, y, method="slope", window=100, peak_amp_thresh=0.00005, valley_thresh=0.00003):
     """
-    This function expects smoothed histogram (i.e., y).
+    This function expects SMOOTHED histogram (i.e., y).
 
     method can be JI/ET/slope/hybrid.
     JI and ET methods do not use generic peak detection algorithm. They use intervals and window
@@ -223,7 +198,11 @@ def peaks(y, x, method="JI", window=100, peak_amp_thresh=0.00005, valley_thresh=
     and then applies bounds. Hybrid approach first finds peaks using generic peak detection algo, 
     then filters the peaks heuristically as in JI/ET.
     
-    window refers to the cent range used while picking up the maxima.
+    window refers to the range in cents used while picking up the maxima in ET method. In rest of the
+    methods, the argument is ignored/used with less important consequences.
+
+    peak_amp_thresh is the minimum amplitude/height that a peak should have in a normalized smoothed
+    histogram, to be qualified as a peak. valley_thresh is viceversa for valleys!
 
     The method returns:
     {"peaks":[[peak positions], [peak amplitudes]], "valleys": [[valley positions], [valley amplitudes]]}
