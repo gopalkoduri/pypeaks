@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def find_nearest_index(arr, value):
     """For a given value, the function finds the nearest value 
     in the array and returns its index."""
@@ -7,8 +8,11 @@ def find_nearest_index(arr, value):
     index = (np.abs(arr - value)).argmin()
     return index
 
+
 #the following two functions are taken from: 
 #https://gist.github.com/1178136
+
+
 def _datacheck_peakdetect(x_axis, y_axis):
     if x_axis is None:
         x_axis = range(len(y_axis))
@@ -20,8 +24,9 @@ def _datacheck_peakdetect(x_axis, y_axis):
     y_axis = np.array(y_axis)
     x_axis = np.array(x_axis)
     return x_axis, y_axis
-    
-def peakdetect(y_axis, x_axis = None, lookahead = 300, delta=0):
+
+
+def peakdetect(y_axis, x_axis=None, lookahead=300, delta=0):
     """
     Converted from/based on a MATLAB script at: 
     http://billauer.co.il/peakdet.html
@@ -55,7 +60,7 @@ def peakdetect(y_axis, x_axis = None, lookahead = 300, delta=0):
     """
     max_peaks = []
     min_peaks = []
-    dump = []   #Used to pop the first hit which almost always is false
+    dump = []   # Used to pop the first hit which almost always is false
     
     # check input data
     x_axis, y_axis = _datacheck_peakdetect(x_axis, y_axis)
@@ -119,8 +124,7 @@ def peakdetect(y_axis, x_axis = None, lookahead = 300, delta=0):
             #else:  #slows shit down this does
             #    mn = ahead
             #    mnpos = x_axis[np.where(y_axis[index:index+lookahead]==mn)]
-    
-    
+
     #Remove the false hit on the first value of the y_axis
     try:
         if dump[0]:
@@ -134,6 +138,7 @@ def peakdetect(y_axis, x_axis = None, lookahead = 300, delta=0):
         
     return [max_peaks, min_peaks]
 
+
 def peaks(x, y, lookahead=20, delta=0.00003):
     """
     A wrapper around peakdetect to pack the return values in a nicer format
@@ -144,6 +149,6 @@ def peaks(x, y, lookahead=20, delta=0.00003):
     x_valleys = [p[0] for p in _min]
     y_valleys = [p[1] for p in _min]
     
-    peaks = [x_peaks, y_peaks]
-    valleys = [x_valleys, y_valleys]
-    return {"peaks": peaks, "valleys": valleys}
+    _peaks = [x_peaks, y_peaks]
+    _valleys = [x_valleys, y_valleys]
+    return {"peaks": _peaks, "valleys": _valleys}

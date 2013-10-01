@@ -1,23 +1,29 @@
 #!/usr/bin/env python
 
+from __future__ import division
+import pickle
+from warnings import warn
+
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 
-from intervals import Intervals
 import slope
+
 
 class Histogram:
     def __init__(self, x, y, smoothness=7):
-        self.x = x
-        self.y_raw = y
+        self.x = np.array(x)
+        self.y_raw = np.array(y)
+        self.y = y
+        self.smooth()
         self.smoothness = smoothness
-        self.y = self.smooth()
+        self.peaks = {}
 
     def set_smoothness(self, smoothness):
         self.smoothness = smoothness
 
     def smooth(self):
-        self.y = gaussian_filter(y, self.smoothness)
+        self.y = gaussian_filter(self.y, self.smoothness)
 
     def normalize(self):
         #TODO
@@ -26,9 +32,9 @@ class Histogram:
     def serialize(self, path):
         pickle.dump([self.x, self.y_raw], file(path, 'w'))
 
-    def get_peaks(self, method="slope", peak_amp_thresh=0.00005, 
-              valley_thresh=0.00003, intervals = None, lookahead = 20,
-                  avg_window = 100):
+    def get_peaks(self, method="slope", peak_amp_thresh=0.00005,
+                  valley_thresh=0.00003, intervals=None, lookahead=20,
+                  avg_interval=100):
         """
         This function expects SMOOTHED histogram. If you run it on a raw histogram,
         there is a high chance that it returns no peaks.
@@ -61,161 +67,158 @@ class Histogram:
         {"peaks":[[peak positions], [peak amplitudes]], 
         "valleys": [[valley positions], [valley amplitudes]]}
         """
-        data = zip(x, y)
-        x = np.array(x)
 
+        peaks = {}
+        slope_peaks = {}
+        #Oh dear future me, please don't get confused with a lot of mess around
+        # indices around here. All indices (eg: left_index etc) refer to indices
+        # of x or y (of histogram).
         if method == "slope" or method == "hybrid":
-            peaks = {}
-            result = slope.peaks(x, y, lookahead=lookahead, delta=valley_thresh)
 
-            # find correspondences between peaks and valleys,
-            # and set valleys are left and right Indices
-            # see the other method(s) for clarity!
+            #step 1: get the peaks
+            result = slope.peaks(self.x, self.y, lookahead=lookahead,
+                                 delta=valley_thresh)
 
+            #step 2: find left and right valley points for each peak
             peak_data = result["peaks"]
             valley_data = result["valleys"]
 
-            # print len(peak_data[0]), len(peak_data[1])
             for i in xrange(len(peak_data[0])):
-                nearest_index = find_nearest_index(valley_data[0], peak_data[0][i])
+                nearest_index = slope.find_nearest_index(valley_data[0],
+                                                         peak_data[0][i])
                 if valley_data[0][nearest_index] < peak_data[0][i]:
-                    left_index = find_nearest_index(
-                        x, valley_data[0][nearest_index])
-                    if (len(valley_data[0][nearest_index + 1:]) == 0):
-                        right_index = find_nearest_index(
-                            x, peak_data[0][i] + avg_window / 2.0)
+                    left_index = slope.find_nearest_index(
+                        self.x, valley_data[0][nearest_index])
+                    if len(valley_data[0][nearest_index + 1:]) == 0:
+                        right_index = slope.find_nearest_index(
+                            self.x, peak_data[0][i] + avg_interval / 2)
                     else:
                         offset = nearest_index + 1
-                        nearest_index = offset + \
-                            find_nearest_index(
-                                valley_data[0][offset:], peak_data[0][i])
-                        right_index = find_nearest_index(
-                            x, valley_data[0][nearest_index])
+                        nearest_index = offset + slope.find_nearest_index(
+                            valley_data[0][offset:], peak_data[0][i])
+                        right_index = slope.find_nearest_index(
+                            self.x, valley_data[0][nearest_index])
                 else:
-                    right_index = find_nearest_index(
-                        x, valley_data[0][nearest_index])
-                    if (len(valley_data[0][:nearest_index]) == 0):
-                        left_index = find_nearest_index(
-                            x, peak_data[0][i] - avg_window / 2.0)
+                    right_index = slope.find_nearest_index(
+                        self.x, valley_data[0][nearest_index])
+                    if len(valley_data[0][:nearest_index]) == 0:
+                        left_index = slope.find_nearest_index(
+                            self.x, peak_data[0][i] - avg_interval / 2)
                     else:
-                        nearest_index = find_nearest_index(
+                        nearest_index = slope.find_nearest_index(
                             valley_data[0][:nearest_index], peak_data[0][i])
-                        left_index = find_nearest_index(
-                            x, valley_data[0][nearest_index])
+                        left_index = slope.find_nearest_index(
+                            self.x, valley_data[0][nearest_index])
 
-                pos = find_nearest_index(x, peak_data[0][i])
-                # print x[pos], peak_data[1][i], x[left_index],
-                # x[right_index]
-                peaks[pos] = [peak_data[1][i], left_index, right_index]
+                pos = slope.find_nearest_index(self.x, peak_data[0][i])
+                slope_peaks[pos] = [peak_data[1][i], left_index, right_index]
 
-                if method == "hybrid":
-                    slope_peaks = peaks
+        if method == "slope":
+            peaks = slope_peaks
 
+        interval_peaks = {}
         if method == "interval" or method == "hybrid":
-            peaks = {}
-            avg_window = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
-            first_center = (min(x) + 1.5 * avg_window) / avg_window * avg_window
-            last_center = (max(x) - avg_window) / avg_window * avg_window
+            #step 1: get the average size of the interval, first and last
+            # probable centers of peaks
+            avg_interval = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
+            first_center = (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval
+            last_center = (max(self.x) - avg_interval) / avg_interval * avg_interval
             if first_center < min(intervals.intervals[0]):
                 first_center = intervals.intervals[0]
-                warn("In the interval based approach, the first center was seen
-                     to be too low and is set to " + str(first_center))
+                warn("In the interval based approach, the first center was seen\
+                    to be too low and is set to " + str(first_center))
             if last_center > intervals.intervals[-1]:
                 last_center = intervals.intervals[-1]
-                warn("In the interval based approach, the last center was seen
+                warn("In the interval based approach, the last center was seen\
                      to be too high and is set to " + str(last_center))
 
+            #step 2: find the peak position, and set the left and right bounds
+            # which are equivalent in sense to the valley points
             interval = first_center
-            prev_interval = first_center - avg_window
-            # NOTE: All intervals are in cents. indices are of x/y
             while interval < last_center:
-                if method == "ET":
-                    left_index = find_nearest_index(
-                        x, interval - avg_window / 2)
-                    right_index = find_nearest_index(
-                        x, interval + avg_window / 2)
-                    interval += avg_window
-                elif method == "JI" or method == "hybrid":
-                    left_index = find_nearest_index(
-                        x, (interval + prev_interval) / 2.0)
-                    prev_interval = interval
-                    interval = next_ji(interval)
-                    right_index = find_nearest_index(
-                        x, (interval + prev_interval) / 2.0)
-                peak_pos = np.argmax(y[left_index:right_index])
-                peak_amp = y[left_index + peak_pos]
-                peaks[left_index + peak_pos] = [peak_amp, left_index, right_index]
+                prev_interval = intervals.prev_interval(interval)
+                next_interval = intervals.next_interval(interval)
+                left_index = slope.find_nearest_index(
+                    self.x, (interval + prev_interval) / 2)
+                right_index = slope.find_nearest_index(
+                    self.x, (interval + next_interval) / 2)
+                peak_pos = np.argmax(self.y[left_index:right_index])
+                # add left_index to peak_pos to get the correct position in x/y
+                peak_amp = self.y[left_index + peak_pos]
+                interval_peaks[left_index + peak_pos] = [peak_amp, left_index,
+                                                         right_index]
 
-                # print x[left_index], x[right_index], x[left_index+peak_pos], peak_amp
-                # NOTE: All the indices (left/right_index, peak_pos) are to be changed to represent respective cent
-                # value corresponding to the bin. Right now, they are indices of
-                # respective x in the array.
+        if method == "interval":
+            peaks = interval_peaks
 
+        # If its is a hybrid method merge the results. If we find same
+        # peak position in both results, we prefer valleys of slope-based peaks
         if method == "hybrid":
-            # Mix peaks from slope method and JI method.
             p1 = slope_peaks.keys()
-            p2 = peaks.keys()
-            all_peaks = {}  # overwriting peaks dict
+            p2 = interval_peaks.keys()
+            all_peaks = {}
             for p in p1:
-                near_index = find_nearest_index(p2, p)
-                if abs(p - p2[near_index]) < avg_window / 2.0:
+                near_index = slope.find_nearest_index(p2, p)
+                if abs(p - p2[near_index]) < avg_interval / 2:
                     p2.pop(near_index)
-
             for p in p1:
                 all_peaks[p] = slope_peaks[p]
             for p in p2:
-                all_peaks[p] = peaks[p]
+                all_peaks[p] = interval_peaks[p]
             peaks = all_peaks
 
-        # Filter the peaks and retain eligible peaks, also get their valley points.
+        # Finally, filter the peaks and retain eligible peaks, also get
+        # their valley points.
 
-        # ----> peak_amp_thresh <---- : remove the peaks which are below that
-
+        # check 1: peak_amp_thresh
         for pos in peaks.keys():
             # pos is an index in x/y. DOES NOT refer to a cent value.
             if peaks[pos][0] < peak_amp_thresh:
-                # print "peak_amp: ", x[pos]
                 peaks.pop(pos)
 
-        # Check if either left or right valley is deeper than ----> valley_thresh
-        # <----.
+        # check 2, 3: valley_thresh, proportion of size of left and right lobes
         valleys = {}
         for pos in peaks.keys():
-            left_lobe = y[peaks[pos][1]:pos]
-            right_lobe = y[pos:peaks[pos][2]]
-            # Sanity check: Is it a genuine peak? Size of distributions on either
-            # side of the peak should be comparable.
-            if len(left_lobe) == 0 or len(right_lobe) == 0:
-                continue
-            if 1.0 * len(left_lobe) / len(right_lobe) < 0.15 or 1.0 * len(left_lobe) / len(right_lobe) > 6.67:
-                # print "size: ", x[pos]
-                # peaks.pop(pos)
+            # remember that peaks[pos][1] is left_index and
+            # peaks[pos][2] is the right_index
+            left_lobe = self.y[peaks[pos][1]:pos]
+            right_lobe = self.y[pos:peaks[pos][2]]
+            if len(left_lobe) == 0 or len(right_lobe) == 0 or\
+                  len(left_lobe) / len(right_lobe) < 0.15 or\
+                  len(left_lobe) / len(right_lobe) > 6.67:
                 continue
 
             left_valley_pos = np.argmin(left_lobe)
             right_valley_pos = np.argmin(right_lobe)
-            if (abs(left_lobe[left_valley_pos] - y[pos]) < valley_thresh and abs(right_lobe[right_valley_pos] - y[pos]) < valley_thresh):
-                # print "valley: ", x[pos]
+            if (abs(left_lobe[left_valley_pos] - self.y[pos]) < valley_thresh and
+                abs(right_lobe[right_valley_pos] - self.y[pos]) < valley_thresh):
                 peaks.pop(pos)
             else:
-                valleys[peaks[pos][1] + left_valley_pos] = left_lobe[
-                    left_valley_pos]
+                valleys[peaks[pos][1] + left_valley_pos] = left_lobe[left_valley_pos]
                 valleys[pos + right_valley_pos] = right_lobe[right_valley_pos]
 
         if len(peaks) > 0:
-            temp1 = np.array(peaks.values())
-            temp1 = temp1[:, 0]
-
-            return {'peaks': [x[peaks.keys()], temp1], 'valleys': [x[valleys.keys()], valleys.values()]}
+            peak_amps = np.array(peaks.values())
+            peak_amps = peak_amps[:, 0]
+            # hello again future me, it is given that you'll pause here
+            # wondering why the heck we index x with peaks.keys() and
+            # valleys.keys(). Just recall that pos refers to indices and
+            # not value corresponding to the histogram bin. If i is pos,
+            # x[i] is the bin value. Tada!!
+            self.peaks = {'peaks': [self.x[peaks.keys()], peak_amps], 'valleys': [self.x[valleys.keys()], valleys.values()]}
         else:
-            return {'peaks': [[], []], 'valleys': [[], []]}
+            self.peaks = {'peaks': [[], []], 'valleys': [[], []]}
 
-    def extend_peaks(src_peaks, prop_thresh=30):
+    @staticmethod
+    def extend_peaks(src_peaks, prop_thresh=50):
         """Each peak in src_peaks is checked for its presence in other octaves.
         If it does not exist, it is created. prop_thresh is the cent range within
         which the peak in the other octave is expected to be present, i.e., only
         if there is a peak within this cent range in other octaves, then the peak
         is considered to be present in that octave.
+
+        This is a static method which is not allowed to change the existing peaks.
+        It just returns the extended peaks.
         """
         # octave propagation of the reference peaks
         temp_peaks = [i + 1200 for i in src_peaks["peaks"][0]]
@@ -224,7 +227,7 @@ class Histogram:
         extended_peaks.extend(src_peaks["peaks"][0])
         for i in temp_peaks:
             # if a peak exists around, don't add this new one.
-            nearest_ind = find_nearest_index(src_peaks["peaks"][0], i)
+            nearest_ind = slope.find_nearest_index(src_peaks["peaks"][0], i)
             diff = abs(src_peaks["peaks"][0][nearest_ind] - i)
             diff = np.mod(diff, 1200)
             if diff > prop_thresh:
