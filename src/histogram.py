@@ -27,9 +27,10 @@ class Histogram:
         pickle.dump([self.x, self.y_raw], file(path, 'w'))
 
     def get_peaks(self, method="slope", peak_amp_thresh=0.00005, 
-              valley_thresh=0.00003, intervals = None, lookahead = 20):
+              valley_thresh=0.00003, intervals = None, lookahead = 20,
+                  avg_window = 100):
         """
-        This function expects SMOOTHED histogram (i.e., y). If you pass a raw histogram,
+        This function expects SMOOTHED histogram. If you run it on a raw histogram,
         there is a high chance that it returns no peaks.
 
         method can be interval/slope/hybrid.
@@ -52,8 +53,9 @@ class Histogram:
         If the method is interval/hybrid, then the intervals argument must be passed
         and it should be an instance of Intervals class.
 
-        If the method is slope/hybrid, then the lookahead argument should be changed
-        based on the application. It has some default value though.
+        If the method is slope/hybrid, then the lookahead and avg_window
+        arguments should be changed based on the application. 
+        They have some default values though.
 
         The method returns:
         {"peaks":[[peak positions], [peak amplitudes]], 
@@ -62,23 +64,16 @@ class Histogram:
         data = zip(x, y)
         x = np.array(x)
 
-        avg_window = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
-        first_center = (min(x) + 1.5 * avg_window) / avg_window * avg_window
-        last_center = (max(x) - avg_window) / avg_window * avg_window
-        if first_center < min(intervals.intervals[0]):
-            first_center = intervals.intervals[0]
-        if last_center > intervals.intervals[-1]:
-            last_center = intervals.intervals[-1]
-
         if method == "slope" or method == "hybrid":
             peaks = {}
-            peak_info = slope.peaks(x, y, lookahead=lookahead, delta=valley_thresh)
+            result = slope.peaks(x, y, lookahead=lookahead, delta=valley_thresh)
 
-            # find correspondences between peaks and valleys, and set valleys are left and right Indices
+            # find correspondences between peaks and valleys,
+            # and set valleys are left and right Indices
             # see the other method(s) for clarity!
 
-            peak_data = peak_info["peaks"]
-            valley_data = peak_info["valleys"]
+            peak_data = result["peaks"]
+            valley_data = result["valleys"]
 
             # print len(peak_data[0]), len(peak_data[1])
             for i in xrange(len(peak_data[0])):
@@ -118,14 +113,21 @@ class Histogram:
 
         if method == "interval" or method == "hybrid":
             peaks = {}
-            # Obtain max value per interval
-            if method == "JI" or method == "hybrid":
-                first_center = nearest_ji(first_center)
-                last_center = nearest_ji(last_center)
+            avg_window = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
+            first_center = (min(x) + 1.5 * avg_window) / avg_window * avg_window
+            last_center = (max(x) - avg_window) / avg_window * avg_window
+            if first_center < min(intervals.intervals[0]):
+                first_center = intervals.intervals[0]
+                warn("In the interval based approach, the first center was seen
+                     to be too low and is set to " + str(first_center))
+            if last_center > intervals.intervals[-1]:
+                last_center = intervals.intervals[-1]
+                warn("In the interval based approach, the last center was seen
+                     to be too high and is set to " + str(last_center))
 
             interval = first_center
             prev_interval = first_center - avg_window
-            # NOTE: All *intervals are in cents. *indices are of x/y
+            # NOTE: All intervals are in cents. indices are of x/y
             while interval < last_center:
                 if method == "ET":
                     left_index = find_nearest_index(
