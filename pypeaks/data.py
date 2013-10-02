@@ -10,7 +10,24 @@ import slope
 
 
 class Data:
+    """
+    The Data object for peak detection has methods necessary to handle the
+    histogram/time-series like data.
+    """
     def __init__(self, x, y, smoothness=7):
+        """
+        Initializes the data object for peak detection with x, y, smoothness
+        parameter and peaks (empty initially). In a histogram, x refers to bin centers (not
+        edges), and y refers to the corresponding count/frequency.
+
+        The smoothness parameter refers to the standard deviation of the
+        gaussian kernel used for smoothing.
+
+        The peaks variable is a dictionary of the following form:
+        {"peaks":[[peak positions], [peak amplitudes]],
+        "valleys": [[valley positions], [valley amplitudes]]}
+        """
+
         self.x = np.array(x)
         self.y_raw = np.array(y)
         self.y = np.array(y)
@@ -19,16 +36,35 @@ class Data:
         self.peaks = {}
 
     def set_smoothness(self, smoothness):
+        """
+        This method (re)sets the smoothness parameter.
+        """
         self.smoothness = smoothness
+        self.smooth()
 
     def smooth(self):
-        self.y = gaussian_filter(self.y, self.smoothness)
+        """
+        Smooths the data using a gaussian kernel of the given standard deviation
+        (as smoothness parameter)
+        """
+        self.y = gaussian_filter(self.y_raw, self.smoothness)
 
     def normalize(self):
-        #TODO
-        pass
+        """
+        Normalizes the given data such that the area under the histogram/curve
+        comes to 1. Also re applies smoothing once done.
+        """
+        median_diff = np.median(np.diff(self.x))
+        bin_edges = [self.x[0] - median_diff/2.0]
+        bin_edges.extend(median_diff/2.0 + self.x)
+        self.y_raw = self.y_raw/(self.y_raw.sum()*np.diff(bin_edges))
+        self.smooth()
 
     def serialize(self, path):
+        """
+        Saves the raw (read unsmoothed) histogram data to the given path using
+        pickle python module.
+        """
         pickle.dump([self.x, self.y_raw], file(path, 'w'))
 
     def get_peaks(self, method="slope", peak_amp_thresh=0.00005,
@@ -42,14 +78,16 @@ class Data:
             The interval-based method simply steps through the whole histogram
             and pick up the local maxima in each interval, from which irrelevant
             peaks are filtered out by looking at the proportion of points on 
-            either side of the detected peak in each interval.
+            either side of the detected peak in each interval, and by applying
+            peal_amp_thresh and valley_thresh bounds.
         
             Slope approach uses, of course slope information, to find peaks, 
             which are then filtered by applying peal_amp_thresh and 
             valley_thresh bounds. 
             
-            Hybrid approach first finds peaks using slope method and then filters 
-            them heuristically as in interval-based approach.
+            Hybrid approach combines the peaks obtained using slope method and
+            interval-based approach. It retains the peaks/valleys from slope method
+            if there should be a peak around the same region from each of the methods.
         
         peak_amp_thresh is the minimum amplitude/height that a peak should have
         in a normalized smoothed histogram, to be qualified as a peak. 
@@ -62,8 +100,8 @@ class Data:
         arguments should be changed based on the application. 
         They have some default values though.
 
-        The method returns:
-        {"peaks":[[peak positions], [peak amplitudes]], 
+        The method stores peaks in self.peaks in the following format:
+        {"peaks":[[peak positions], [peak amplitudes]],
         "valleys": [[valley positions], [valley amplitudes]]}
         """
 
@@ -187,11 +225,12 @@ class Data:
             # peaks[pos][2] is the right_index
             left_lobe = self.y[peaks[pos][1]:pos]
             right_lobe = self.y[pos:peaks[pos][2]]
-            if len(left_lobe) == 0 or len(right_lobe) == 0 or\
-                  len(left_lobe) / len(right_lobe) < 0.15 or\
-                  len(left_lobe) / len(right_lobe) > 6.67:
+            if len(left_lobe) == 0 or len(right_lobe) == 0:
+                peaks.pop(pos)
                 continue
-
+            if len(left_lobe) / len(right_lobe) < 0.15 or len(right_lobe) / len(left_lobe) < 0.15:
+                peaks.pop(pos)
+                continue
             left_valley_pos = np.argmin(left_lobe)
             right_valley_pos = np.argmin(right_lobe)
             if (abs(left_lobe[left_valley_pos] - self.y[pos]) < valley_thresh and

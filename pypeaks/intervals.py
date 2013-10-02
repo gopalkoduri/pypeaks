@@ -4,6 +4,9 @@ from slope import find_nearest_index
 
 class Intervals:
     def __init__(self, intervals):
+        """
+        Initializes the Intervals object with a set of given intervals.
+        """
         self.intervals = np.array(intervals)
 
     def prev_interval(self, interval):
