@@ -3,8 +3,8 @@ pypeaks
 
 ##Introduction
 Identifying peaks from some data is one of the most common tasks in many
-research and development tasks. **pypeaks** is a python module which has 
-a number of ways to detect peaks from any data, like histograms and time-series.
+research and development tasks. **pypeaks** is a python module to detect
+peaks from any data, like histograms and time-series.
 
 Following are the available methods implemented in this module for peak detection:
 * Slope based method, where peaks are located based on how the data varies.
@@ -29,12 +29,12 @@ from pypeaks.intervals import Intervals
 [x, y] = pickle.load(file('examples/sample-histogram.pickle'))
 data_obj = Data(x, y, smoothness=11)
 
-\#Peaks by slope method
+#Peaks by slope method
 data_obj.get_peaks(method='slope')
-\#print data_obj.peaks
+#print data_obj.peaks
 data_obj.plot()
 
-\#Peaks by interval method
+#Peaks by interval method
 ji_intervals = pickle.load('examples/ji_intervals.pickle')
 ji_intervals = Intervals(ji_intervals)
 data_obj.get_peaks(method='interval', intervals=ji_intervals)
