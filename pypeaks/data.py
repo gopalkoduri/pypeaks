@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from __future__ import division
 import pickle
 from warnings import warn
@@ -11,7 +9,7 @@ from scipy.ndimage.filters import gaussian_filter
 import slope
 
 
-class Histogram:
+class Data:
     def __init__(self, x, y, smoothness=7):
         self.x = np.array(x)
         self.y_raw = np.array(y)
@@ -215,26 +213,28 @@ class Histogram:
         else:
             self.peaks = {'peaks': [[], []], 'valleys': [[], []]}
 
-    @staticmethod
-    def extend_peaks(src_peaks, prop_thresh=50):
-        """Each peak in src_peaks is checked for its presence in other octaves.
-        If it does not exist, it is created. prop_thresh is the cent range within
-        which the peak in the other octave is expected to be present, i.e., only
-        if there is a peak within this cent range in other octaves, then the peak
-        is considered to be present in that octave.
+    def extend_peaks(self, prop_thresh=50):
+        """Each peak in the peaks of the object is checked for its presence in 
+        other octaves. If it does not exist, it is created. 
+        
+        prop_thresh is the cent range within which the peak in the other octave 
+        is expected to be present, i.e., only if there is a peak within this 
+        cent range in other octaves, then the peak is considered to be present
+        in that octave.
 
-        This is a static method which is not allowed to change the existing peaks.
-        It just returns the extended peaks.
+        Note that this does not change the peaks of the object. It just returns 
+        the extended peaks.
         """
+
         # octave propagation of the reference peaks
-        temp_peaks = [i + 1200 for i in src_peaks["peaks"][0]]
-        temp_peaks.extend([i - 1200 for i in src_peaks["peaks"][0]])
+        temp_peaks = [i + 1200 for i in self.peaks["peaks"][0]]
+        temp_peaks.extend([i - 1200 for i in self.peaks["peaks"][0]])
         extended_peaks = []
-        extended_peaks.extend(src_peaks["peaks"][0])
+        extended_peaks.extend(self.peaks["peaks"][0])
         for i in temp_peaks:
             # if a peak exists around, don't add this new one.
-            nearest_ind = slope.find_nearest_index(src_peaks["peaks"][0], i)
-            diff = abs(src_peaks["peaks"][0][nearest_ind] - i)
+            nearest_ind = slope.find_nearest_index(self.peaks["peaks"][0], i)
+            diff = abs(self.peaks["peaks"][0][nearest_ind] - i)
             diff = np.mod(diff, 1200)
             if diff > prop_thresh:
                 extended_peaks.append(i)
