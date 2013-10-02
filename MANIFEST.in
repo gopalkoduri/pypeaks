@@ -1,3 +1,4 @@
 include *.py
-include README.md
-recursive-include examples
+include README.rst
+include LICENSE
+recursive-include examples *
