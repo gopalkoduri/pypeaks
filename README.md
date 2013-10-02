@@ -16,10 +16,11 @@ maximum in each interval, filtering out irrelevant peaks at the end.
 ```bash
 $ sudo pip install --upgrade pypeaks
 ```
-Or
-```bash
-$ sudo easy_install -U pypeaks
-```
+
+##Usage
+There is an example case included along with the code. If you don't have this folder, please
+load your data instead. Or get it from 
+[https://github.com/gopalkoduri/pypeaks](https://github.com/gopalkoduri/pypeaks).
 
 ###Important note
 The peak finding function expect a normalized smoothed histogram. It does smoothing by default.
@@ -27,10 +28,6 @@ If you want to change the smoothness, customize the corresponding argument. If t
 is not normalized (so that the area under the curve comes to 1), there is a function
 provided to do that. If you don't get any peaks, then you probably overlooked this!
 
-##Usage
-There is an example case included along with the code. If you don't have this folder, please
-load your data instead. Or get it from 
-[https://github.com/gopalkoduri/pypeaks](https://github.com/gopalkoduri/pypeaks).
 
 ```python
 import pickle
