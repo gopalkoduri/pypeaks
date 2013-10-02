@@ -1,7 +1,6 @@
 pypeaks
 =======
 
-##Introduction
 Identifying peaks from data is one of the most common tasks in many
 research and development tasks. **pypeaks** is a python module to detect
 peaks from any data like histograms and time-series.
@@ -14,13 +13,13 @@ maximum in each interval, filtering out irrelevant peaks at the end.
 * A hybrid method which combines these two methods.
 
 ###Important note
-These functions expect a normalized smoothed histogram. It does smoothing by default.
+The peak finding function expect a normalized smoothed histogram. It does smoothing by default.
 If you want to change the smoothness, customize the corresponding argument. If the data
 is not normalized (so that the area under the curve comes to 1), there is a function
-provided to do that.
+provided to do that. If you don't get any peaks, then you probably overlooked this!
 
 ##Usage
-We have included an example case along with the code. If you don't have this folder, please
+There is an example case included along with the code. If you don't have this folder, please
 load your data instead. Or get it from 
 [https://github.com/gopalkoduri/pypeaks](https://github.com/gopalkoduri/pypeaks).
 
