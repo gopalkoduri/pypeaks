@@ -5,6 +5,7 @@ import pickle
 from warnings import warn
 
 import numpy as np
+import pylab as p
 from scipy.ndimage.filters import gaussian_filter
 
 import slope
@@ -14,9 +15,9 @@ class Histogram:
     def __init__(self, x, y, smoothness=7):
         self.x = np.array(x)
         self.y_raw = np.array(y)
-        self.y = y
-        self.smooth()
+        self.y = np.array(y)
         self.smoothness = smoothness
+        self.smooth()
         self.peaks = {}
 
     def set_smoothness(self, smoothness):
@@ -118,12 +119,16 @@ class Histogram:
 
         interval_peaks = {}
         if method == "interval" or method == "hybrid":
+            if not intervals:
+                raise ValueError('The interval argument is not passed.')
             #step 1: get the average size of the interval, first and last
             # probable centers of peaks
             avg_interval = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
-            first_center = (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval
-            last_center = (max(self.x) - avg_interval) / avg_interval * avg_interval
-            if first_center < min(intervals.intervals[0]):
+            value = (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval
+            first_center = intervals.nearest_interval(value)
+            value = (max(self.x) - avg_interval) / avg_interval * avg_interval
+            last_center = intervals.nearest_interval(value)
+            if first_center < intervals.intervals[0]:
                 first_center = intervals.intervals[0]
                 warn("In the interval based approach, the first center was seen\
                     to be too low and is set to " + str(first_center))
@@ -135,7 +140,7 @@ class Histogram:
             #step 2: find the peak position, and set the left and right bounds
             # which are equivalent in sense to the valley points
             interval = first_center
-            while interval < last_center:
+            while interval <= last_center:
                 prev_interval = intervals.prev_interval(interval)
                 next_interval = intervals.next_interval(interval)
                 left_index = slope.find_nearest_index(
@@ -147,6 +152,7 @@ class Histogram:
                 peak_amp = self.y[left_index + peak_pos]
                 interval_peaks[left_index + peak_pos] = [peak_amp, left_index,
                                                          right_index]
+                interval = next_interval
 
         if method == "interval":
             peaks = interval_peaks
@@ -233,3 +239,43 @@ class Histogram:
             if diff > prop_thresh:
                 extended_peaks.append(i)
         return extended_peaks
+
+    def plot(self, intervals=None, new_fig=True):
+        """This function plots histogram together with its smoothed
+        version and peak information if provided. Just intonation
+        intervals are plotted for a reference."""
+        if new_fig:
+            p.figure()
+
+        #step 1: plot histogram
+        p.plot(self.x, self.y, ls='-', c='b', lw='1.5')
+
+        #step 2: plot peaks
+        first_peak = None
+        last_peak = None
+        if self.peaks:
+            first_peak = min(self.peaks["peaks"][0])
+            last_peak = max(self.peaks["peaks"][0])
+            p.plot(self.peaks["peaks"][0], self.peaks["peaks"][1], 'rD', ms=10)
+            p.plot(self.peaks["valleys"][0], self.peaks["valleys"][1], 'yD', ms=5)
+
+        #Intervals
+        if intervals is not None:
+            #spacing = 0.02*max(self.y)
+            for interval in intervals:
+                if first_peak is not None:
+                    if interval <= first_peak or interval >= last_peak:
+                        continue
+                p.axvline(x=interval, ls='-.', c='g', lw='1.5')
+                if interval-1200 >= min(self.x):
+                    p.axvline(x=interval-1200, ls=':', c='b', lw='0.5')
+                if interval+1200 <= max(self.x):
+                    p.axvline(x=interval+1200, ls=':', c='b', lw='0.5')
+                if interval+2400 <= max(self.x):
+                    p.axvline(x=interval+2400, ls='-.', c='r', lw='0.5')
+                #spacing *= -1
+
+        #p.title("Tonic-aligned complete-range pitch histogram")
+        #p.xlabel("Pitch value (Cents)")
+        #p.ylabel("Normalized frequency of occurence")
+        p.show()
