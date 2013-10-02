@@ -12,6 +12,15 @@ information that there will be at most one peak in each interval, and we just pi
 maximum in each interval, filtering out irrelevant peaks at the end.
 * A hybrid method which combines these two methods.
 
+##Installation
+```bash
+$ sudo pip install --upgrade pypeaks
+```
+Or
+```bash
+$ sudo easy_install -U pypeaks
+```
+
 ###Important note
 The peak finding function expect a normalized smoothed histogram. It does smoothing by default.
 If you want to change the smoothness, customize the corresponding argument. If the data
