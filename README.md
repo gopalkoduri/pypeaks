@@ -2,35 +2,44 @@ pypeaks
 =======
 
 ##Introduction
-Python program which has a number of ways to detect peaks from any data. 
-This particular implementation is primarily focussed on histogram data 
-obtained from pitch values of an audio music recording. It has a number 
-of functions which have been well documented. The most useful one is
-peaks() function which is quite flexible with a number of arguments.
+Identifying peaks from some data is one of the most common tasks in many
+research and development tasks. **pypeaks** is a python module which has 
+a number of ways to detect peaks from any data, like histograms and time-series.
 
-There are mainly the following methods implemented for peak detection:
-* Slope based method
-* Peaks based on just intonation intervals (Or any custom set of intervals)
-* Peaks based on equi-tempered intervals (with custom interval width)
-* A hybrid method which combines the best of the three methods
+Following are the available methods implemented in this module for peak detection:
+* Slope based method, where peaks are located based on how the data varies.
+* Peaks based on intervals, where a set of intervals can be passed to provide appriori
+information tha there will be at most one peak in each interval.
+* A hybrid method which combines the best of these two methods.
 
 ###Important note
-These functions expect a normalized smoothed histogram.
+These functions expect a normalized smoothed histogram. It does smoothing by default.
+If you want to change the smoothness, customize the corresponding argument.
 
 ##Usage
+We have included an example case along with the data. If you dont have this folder, please
+load your data instead. Or get it from 
+[https://github.com/gopalkoduri/pypeaks](https://github.com/gopalkoduri/pypeaks).
+
 ```python
 import pickle
-import matplotlib.plot as plt
-from scipy.ndimage.filters import gaussian_filter
+from pypeaks.data import Data
+from pypeaks.intervals import Intervals
 
-[x, y] = pickle.load(file('data/sample-histogram.pickle'))
-#this histogram is already normalized, we just smooth it
-y_smoothed = gaussian_filter(y, 11)
-#let's see how it looks
-plot(x, ys)
+[x, y] = pickle.load(file('examples/sample-histogram.pickle'))
+data_obj = Data(x, y, smoothness=11)
 
-#now get the peaks!
-import peak_detection as pd
+\#Peaks by slope method
+data_obj.get_peaks(method='slope')
+\#print data_obj.peaks
+data_obj.plot()
 
-peaks = pd.peaks()
+\#Peaks by interval method
+ji_intervals = pickle.load('examples/ji_intervals.pickle')
+ji_intervals = Intervals(ji_intervals)
+data_obj.get_peaks(method='interval', intervals=ji_intervals)
+\#print data_obj.peaks
+data_obj.plot(intervals=ji_intervals)
+
+
 ```
