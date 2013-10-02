@@ -39,7 +39,7 @@ data_obj.plot()
 ji_intervals = pickle.load('examples/ji_intervals.pickle')
 ji_intervals = Intervals(ji_intervals)
 data_obj.get_peaks(method='interval', intervals=ji_intervals)
-\#print data_obj.peaks
+#print data_obj.peaks
 data_obj.plot(intervals=ji_intervals)
 
 #Read the help on Data object, and everything else is explained there.
