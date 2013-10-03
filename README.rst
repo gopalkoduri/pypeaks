@@ -13,15 +13,12 @@ peak in each interval, and we just pick the maximum in each interval,
 filtering out irrelevant peaks at the end. \* A hybrid method which
 combines these two methods.
 
-Important note
-~~~~~~~~~~~~~~
+Installation
+------------
 
-The peak finding function expect a normalized smoothed histogram. It
-does smoothing by default. If you want to change the smoothness,
-customize the corresponding argument. If the data is not normalized (so
-that the area under the curve comes to 1), there is a function provided
-to do that. If you don't get any peaks, then you probably overlooked
-this!
+::
+
+    $ sudo pip install --upgrade pypeaks
 
 Usage
 -----
@@ -29,6 +26,16 @@ Usage
 There is an example case included along with the code. If you don't have
 this folder, please load your data instead. Or get it from
 `https://github.com/gopalkoduri/pypeaks <https://github.com/gopalkoduri/pypeaks>`_.
+
+Important note
+~~~~~~~~~~~~~~
+
+The peak finding function expects a normalized smoothed histogram. It
+does smoothing by default. If you want to change the smoothness,
+customize the corresponding argument. If the data is not normalized (so
+that the area under the curve comes to 1), there is a function provided
+to do that. If you don't get any peaks, then you probably overlooked
+this!
 
 ::
 
@@ -47,7 +54,7 @@ this folder, please load your data instead. Or get it from
     ji_intervals = pickle.load('examples/ji_intervals.pickle')
     ji_intervals = Intervals(ji_intervals)
     data_obj.get_peaks(method='interval', intervals=ji_intervals)
-    \#print data_obj.peaks
+    #print data_obj.peaks
     data_obj.plot(intervals=ji_intervals)
 
     #Read the help on Data object, and everything else is explained there.
@@ -56,3 +63,8 @@ this folder, please load your data instead. Or get it from
 In case you face some issue, report it on
 `github <https://github.com/gopalkoduri/pypeaks>`_, or write to me at
 **gopala [dot] koduri [at] gmail [dot] com**!
+
+`|Bitdeli Badge| <https://bitdeli.com/free>`_
+
+.. |Bitdeli
+Badge| image:: https://d2weczhvl823v0.cloudfront.net/gopalkoduri/pypeaks/trend.png
