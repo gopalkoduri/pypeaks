@@ -63,8 +63,3 @@ this!
 In case you face some issue, report it on
 `github <https://github.com/gopalkoduri/pypeaks>`_, or write to me at
 **gopala [dot] koduri [at] gmail [dot] com**!
-
-`|Bitdeli Badge| <https://bitdeli.com/free>`_
-
-.. |Bitdeli
-Badge| image:: https://d2weczhvl823v0.cloudfront.net/gopalkoduri/pypeaks/trend.png

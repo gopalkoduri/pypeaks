@@ -14,7 +14,7 @@ class Data:
     The Data object for peak detection has methods necessary to handle the
     histogram/time-series like data.
     """
-    def __init__(self, x, y, smoothness=7):
+    def __init__(self, x, y, smoothness=7, default_smooth=True):
         """
         Initializes the data object for peak detection with x, y, smoothness
         parameter and peaks (empty initially). In a histogram, x refers to bin centers (not
@@ -32,7 +32,8 @@ class Data:
         self.y_raw = np.array(y)
         self.y = np.array(y)
         self.smoothness = smoothness
-        self.smooth()
+        if default_smooth:
+            self.smooth()
         self.peaks = {}
 
     def set_smoothness(self, smoothness):
