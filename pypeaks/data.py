@@ -156,7 +156,7 @@ class Data:
 
         interval_peaks = {}
         if method == "interval" or method == "hybrid":
-            if not intervals:
+            if intervals is None:
                 raise ValueError('The interval argument is not passed.')
             #step 1: get the average size of the interval, first and last
             # probable centers of peaks
