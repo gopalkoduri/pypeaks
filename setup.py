@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='pypeaks',
-      version='0.2.4',
+      version='0.2.5',
       description='Python module with different methods to identify peaks from data like histograms and time-series data',
       long_description=readme(),
       classifiers=[
@@ -21,7 +21,6 @@ setup(name='pypeaks',
       author_email='gopala.koduri@gmail.com',
       license='GNU Affero GPL v3',
       packages=['pypeaks'],
-      #data_files=[('examples', ['howto.ipynb', 'howto.py', 'ji-intervals.pickle' 'sample-histogram.pickle'])],
       install_requires=[
           'numpy',
           'matplotlib',
