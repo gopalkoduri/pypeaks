@@ -4,3 +4,4 @@ v0.2.2, 04/10/12 -- If the default smoothing on histogram is not desired, it can
 v0.2.3, 05/10/12 -- Fixed an installation bug.
 v0.2.4, 05/10/12 -- Fixed a bug which does not allow the users to reload pypeaks.
 v0.2.5, 09/10/12 -- Fixed a bug that fails to catch error in Data class, and re-added examples to the package.
+v0.2.6, 09/10/12 -- Fixed another bug that fails to catch error in Data class
