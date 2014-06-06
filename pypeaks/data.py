@@ -3,7 +3,6 @@ import pickle
 from warnings import warn
 
 import numpy as np
-import pylab as p
 from scipy.ndimage.filters import gaussian_filter
 
 import slope
@@ -284,6 +283,9 @@ class Data:
         """This function plots histogram together with its smoothed
         version and peak information if provided. Just intonation
         intervals are plotted for a reference."""
+
+        import pylab as p
+
         if new_fig:
             p.figure()
 
