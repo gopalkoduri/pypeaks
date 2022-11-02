@@ -5,7 +5,7 @@ from warnings import warn
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 
-import slope
+from . import slope
 
 
 class Data:
@@ -65,7 +65,7 @@ class Data:
         Saves the raw (read unsmoothed) histogram data to the given path using
         pickle python module.
         """
-        pickle.dump([self.x, self.y_raw], file(path, 'w'))
+        pickle.dump([self.x, self.y_raw], open(path, 'w'))
 
     def get_peaks(self, method="slope", peak_amp_thresh=0.00005,
                   valley_thresh=0.00003, intervals=None, lookahead=20,
@@ -120,7 +120,7 @@ class Data:
             peak_data = result["peaks"]
             valley_data = result["valleys"]
 
-            for i in xrange(len(peak_data[0])):
+            for i in range(len(peak_data[0])):
                 nearest_index = slope.find_nearest_index(valley_data[0],
                                                          peak_data[0][i])
                 if valley_data[0][nearest_index] < peak_data[0][i]:

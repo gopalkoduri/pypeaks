@@ -1,5 +1,5 @@
 import numpy as np
-from slope import find_nearest_index
+from .slope import find_nearest_index
 
 
 class Intervals:

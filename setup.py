@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='pypeaks',
-      version='0.2.7',
+      version='1.0.0',
       description='Python module with different methods to identify peaks from data like histograms and time-series data',
       long_description=readme(),
       classifiers=[

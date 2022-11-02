@@ -10,7 +10,7 @@ from pypeaks import Data, Intervals
 #If you don't have it, you can either load your own data, or download them from 
 #https://github.com/gopalkoduri/pypeaks
 
-data = pickle.load(file("../examples/sample-histogram.pickle"))
+data = pickle.load(open("../examples/sample-histogram.pickle"))
 hist = Data(data[0], data[1])
 
 #Get peaks by slope method and plot them
@@ -22,7 +22,7 @@ hist.plot()
 
 #In the example/ folder, there is a pickle file with some example intervals, 
 #in this case, just-intonation intervals for music. They can refer to any intervals!
-ji_intervals = pickle.load(file('../examples/ji-intervals.pickle'))
+ji_intervals = pickle.load(open('../examples/ji-intervals.pickle'))
 ji_intervals = Intervals(ji_intervals)
 
 hist.get_peaks(method='interval', intervals=ji_intervals)
