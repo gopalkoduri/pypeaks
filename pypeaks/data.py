@@ -196,8 +196,8 @@ class Data:
         # If its is a hybrid method merge the results. If we find same
         # peak position in both results, we prefer valleys of slope-based peaks
         if method == "hybrid":
-            p1 = slope_peaks.keys()
-            p2 = interval_peaks.keys()
+            p1 = list(slope_peaks.keys())
+            p2 = list(interval_peaks.keys())
             all_peaks = {}
             for p in p1:
                 near_index = slope.find_nearest_index(p2, p)
@@ -213,14 +213,16 @@ class Data:
         # their valley points.
 
         # check 1: peak_amp_thresh
-        for pos in peaks.keys():
+        peak_positions = list(peaks.keys())
+        for pos in peak_positions:
             # pos is an index in x/y. DOES NOT refer to a cent value.
             if peaks[pos][0] < peak_amp_thresh:
                 peaks.pop(pos)
 
         # check 2, 3: valley_thresh, proportion of size of left and right lobes
+        peak_positions = list(peaks.keys())
         valleys = {}
-        for pos in peaks.keys():
+        for pos in peak_positions:
             # remember that peaks[pos][1] is left_index and
             # peaks[pos][2] is the right_index
             left_lobe = self.y[peaks[pos][1]:pos]
@@ -241,14 +243,14 @@ class Data:
                 valleys[pos + right_valley_pos] = right_lobe[right_valley_pos]
 
         if len(peaks) > 0:
-            peak_amps = np.array(peaks.values())
+            peak_amps = np.array(list(peaks.values()))
             peak_amps = peak_amps[:, 0]
             # hello again future me, it is given that you'll pause here
             # wondering why the heck we index x with peaks.keys() and
             # valleys.keys(). Just recall that pos refers to indices and
             # not value corresponding to the histogram bin. If i is pos,
             # x[i] is the bin value. Tada!!
-            self.peaks = {'peaks': [self.x[peaks.keys()], peak_amps], 'valleys': [self.x[valleys.keys()], valleys.values()]}
+            self.peaks = {'peaks': [self.x[list(peaks.keys())], peak_amps], 'valleys': [self.x[list(valleys.keys())], list(valleys.values())]}
         else:
             self.peaks = {'peaks': [[], []], 'valleys': [[], []]}
 
