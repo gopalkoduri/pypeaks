@@ -200,9 +200,10 @@ class Data:
             p2 = list(interval_peaks.keys())
             all_peaks = {}
             for p in p1:
-                near_index = slope.find_nearest_index(p2, p)
-                if abs(p - p2[near_index]) < avg_interval / 2:
-                    p2.pop(near_index)
+                if (len(p2) > 0):
+                    near_index = slope.find_nearest_index(p2, p)
+                    if abs(p - p2[near_index]) < avg_interval / 2:
+                        p2.pop(near_index)
             for p in p1:
                 all_peaks[p] = slope_peaks[p]
             for p in p2:
