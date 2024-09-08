@@ -1,7 +1,10 @@
 from .data import Data
 from .data import Data as Histogram
 from .intervals import Intervals
+from datetime import datetime
 
-#del data
-#del intervals
-#del slope
+__version__ = datetime.now().strftime("%Y.%m.%d")
+
+# del data
+# del intervals
+# del slope
