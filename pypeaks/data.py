@@ -183,6 +183,9 @@ class Data:
                     self.x, (interval + prev_interval) / 2)
                 right_index = slope.find_nearest_index(
                     self.x, (interval + next_interval) / 2)
+                if left_index >= right_index:
+                    interval = next_interval
+                    continue
                 peak_pos = np.argmax(self.y[left_index:right_index])
                 # add left_index to peak_pos to get the correct position in x/y
                 peak_amp = self.y[left_index + peak_pos]
