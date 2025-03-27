@@ -1,4 +1,4 @@
 include *.py
-include README.rst
+include README.md
 include LICENSE
 recursive-include pypeaks/examples *

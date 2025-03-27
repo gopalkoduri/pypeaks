@@ -1,25 +1,25 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "numpy", "scipy"]
+requires = ["setuptools>=77.0.0", "packaging>=24.2", "wheel", "numpy", "scipy"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pypeaks"
 dynamic = ["version"]
 description = "Python module with different methods to identify peaks from data like histograms and time-series data"
-readme = "README.rst"
+readme = "README.md"
 authors = [
     {name = "Gopala Krishna Koduri", email = "gopala.koduri@gmail.com"},
 ]
-license = {file = "LICENSE"}
+license = {text = "AGPL-3.0-only"}
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
 ]
 keywords = ["python", "peaks", "histogram", "time-series", "maxima", "minima"]
 urls = { "Homepage" = "https://github.com/gopalkoduri/pypeaks" }
@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["pypeaks"]
+include = ["pypeaks", "pypeaks.examples"]
 
 [tool.setuptools.dynamic]
 version = {attr = "pypeaks.__version__"}
