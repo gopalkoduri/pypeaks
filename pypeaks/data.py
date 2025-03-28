@@ -70,95 +70,161 @@ class Data:
     def get_peaks(self, method="slope", peak_amp_thresh=0.00005,
                   valley_thresh=0.00003, intervals=None, lookahead=20,
                   avg_interval=100):
+        """Detects peaks in a smoothed histogram using one of three methods.
+
+        This function analyzes smoothed histogram data to identify significant peaks
+        and their corresponding valleys. It requires pre-smoothed data - running it
+        on raw histograms may result in no peaks being detected.
+
+        Parameters
+        ----------
+        method : str, optional (default="slope")
+            The peak detection method to use:
+            - "slope": Uses slope analysis to identify peaks. More precise for 
+              irregular data but may miss peaks in regular intervals.
+            - "interval": Steps through histogram at regular intervals to find local
+              maxima. Better for data with known regular spacing between peaks.
+            - "hybrid": Combines slope and interval methods, using slope-based valleys
+              when peaks are found in the same region by both methods.
+
+        peak_amp_thresh : float, optional (default=0.00005)
+            Minimum normalized amplitude a peak must have to be considered valid.
+            Higher values result in fewer, more prominent peaks.
+
+        valley_thresh : float, optional (default=0.00003)
+            Minimum normalized depth a valley must have relative to adjacent peaks.
+            Higher values ensure clearer separation between peaks.
+
+        intervals : Intervals object, optional (default=None)
+            Required for interval/hybrid methods. Defines the regular intervals
+            at which to look for peaks. Must be an instance of Intervals class.
+
+        lookahead : int, optional (default=20)
+            For slope/hybrid methods: number of points to look ahead when 
+            analyzing slope changes. Larger values smooth out small variations.
+
+        avg_interval : int, optional (default=100)
+            For slope/hybrid methods: approximate distance between peaks, used
+            for determining search windows around peaks.
+
+        Notes
+        -----
+        The function applies several filters to identify genuine peaks:
+        1. Peak amplitude must exceed peak_amp_thresh
+        2. Valley depth must exceed valley_thresh
+        3. Left and right "lobes" around peak must be reasonably balanced
+           (within 15% of each other in size)
+
+        The detected peaks are stored in self.peaks dictionary with format:
+        {
+            "peaks": [
+                [peak_position_1, peak_position_2, ...],  # x-values
+                [peak_amplitude_1, peak_amplitude_2, ...]  # y-values
+            ],
+            "valleys": [
+                [valley_position_1, valley_position_2, ...],  # x-values
+                [valley_amplitude_1, valley_amplitude_2, ...]  # y-values
+            ]
+        }
+
+        Examples
+        --------
+        # For regular spaced peaks (e.g. musical intervals):
+        data.get_peaks(method="interval", intervals=interval_obj)
+
+        # For irregular data with clear slope changes:
+        data.get_peaks(method="slope", lookahead=30)
+
+        # For complex data that may have both regular and irregular peaks:
+        data.get_peaks(method="hybrid", intervals=interval_obj, lookahead=25)
         """
-        This function expects SMOOTHED histogram. If you run it on a raw histogram,
-        there is a high chance that it returns no peaks.
 
-        method can be interval/slope/hybrid.
-            The interval-based method simply steps through the whole histogram
-            and pick up the local maxima in each interval, from which irrelevant
-            peaks are filtered out by looking at the proportion of points on 
-            either side of the detected peak in each interval, and by applying
-            peal_amp_thresh and valley_thresh bounds.
+        # Initialize storage for peaks and their properties
+        peaks = {}          # Will store final filtered peaks
+        slope_peaks = {}    # Temporary storage for slope-based peaks
         
-            Slope approach uses, of course slope information, to find peaks, 
-            which are then filtered by applying peal_amp_thresh and 
-            valley_thresh bounds. 
-            
-            Hybrid approach combines the peaks obtained using slope method and
-            interval-based approach. It retains the peaks/valleys from slope method
-            if there should be a peak around the same region from each of the methods.
-        
-        peak_amp_thresh is the minimum amplitude/height that a peak should have
-        in a normalized smoothed histogram, to be qualified as a peak. 
-        valley_thresh is viceversa for valleys!
-
-        If the method is interval/hybrid, then the intervals argument must be passed
-        and it should be an instance of Intervals class.
-
-        If the method is slope/hybrid, then the lookahead and avg_window
-        arguments should be changed based on the application. 
-        They have some default values though.
-
-        The method stores peaks in self.peaks in the following format:
-        {"peaks":[[peak positions], [peak amplitudes]],
-        "valleys": [[valley positions], [valley amplitudes]]}
-        """
-
-        peaks = {}
-        slope_peaks = {}
-        #Oh dear future me, please don't get confused with a lot of mess around
-        # indices around here. All indices (eg: left_index etc) refer to indices
-        # of x or y (of histogram).
+        # Note on indexing throughout this function:
+        # - All position indices (left_index, right_index, etc.) refer to array 
+        #   indices in self.x/self.y arrays
+        # - To get actual x-values (e.g. cents), use self.x[index]
+        # - Peak dictionary format: {position_index: [amplitude, left_valley_index, right_valley_index]}
+        #----------------------------------------
+        # Slope-based Peak Detection
+        #----------------------------------------
         if method == "slope" or method == "hybrid":
-
-            #step 1: get the peaks
+            # Step 1: Detect potential peaks using slope changes
+            # - lookahead: how far to look for slope changes
+            # - delta (valley_thresh): minimum depth between peak and valley
             result = slope.peaks(self.x, self.y, lookahead=lookahead,
                                  delta=valley_thresh)
 
-            #step 2: find left and right valley points for each peak
-            peak_data = result["peaks"]
-            valley_data = result["valleys"]
+            # Step 2: Find enclosing valleys for each detected peak
+            peak_data = result["peaks"]      # [x_values, amplitudes]
+            valley_data = result["valleys"]   # [x_values, amplitudes]
 
+            # Process each detected peak to find its enclosing valleys
             for i in range(len(peak_data[0])):
+                # Find the valley point closest to current peak
+                # This could be either left or right of the peak
                 nearest_index = slope.find_nearest_index(valley_data[0],
                                                          peak_data[0][i])
+                
+                # Case 1: Nearest valley is to the left of peak
                 if valley_data[0][nearest_index] < peak_data[0][i]:
+                    # Use this valley as left boundary
                     left_index = slope.find_nearest_index(
                         self.x, valley_data[0][nearest_index])
+                    
+                    # Look for right valley
                     if len(valley_data[0][nearest_index + 1:]) == 0:
+                        # No more valleys to right, use estimated position
                         right_index = slope.find_nearest_index(
                             self.x, peak_data[0][i] + avg_interval / 2)
                     else:
+                        # Find next closest valley to the right
                         offset = nearest_index + 1
                         nearest_index = offset + slope.find_nearest_index(
                             valley_data[0][offset:], peak_data[0][i])
                         right_index = slope.find_nearest_index(
                             self.x, valley_data[0][nearest_index])
+                
+                # Case 2: Nearest valley is to the right of peak
                 else:
+                    # Use this valley as right boundary
                     right_index = slope.find_nearest_index(
                         self.x, valley_data[0][nearest_index])
+                    
+                    # Look for left valley
                     if len(valley_data[0][:nearest_index]) == 0:
+                        # No more valleys to left, use estimated position
                         left_index = slope.find_nearest_index(
                             self.x, peak_data[0][i] - avg_interval / 2)
                     else:
+                        # Find next closest valley to the left
                         nearest_index = slope.find_nearest_index(
                             valley_data[0][:nearest_index], peak_data[0][i])
                         left_index = slope.find_nearest_index(
                             self.x, valley_data[0][nearest_index])
 
+                # Store peak with its properties:
+                # - Convert peak x-value to index in self.x/self.y
                 pos = slope.find_nearest_index(self.x, peak_data[0][i])
+                # - Store [peak_amplitude, left_valley_index, right_valley_index]
                 slope_peaks[pos] = [peak_data[1][i], left_index, right_index]
 
         if method == "slope":
             peaks = slope_peaks
 
-        interval_peaks = {}
+        #----------------------------------------
+        # Interval-based Peak Detection
+        #----------------------------------------
+        interval_peaks = {}  # Temporary storage for interval-based peaks
         if method == "interval" or method == "hybrid":
+            # Intervals object required for this method
             if intervals is None:
                 raise ValueError('The interval argument is not passed.')
-            #step 1: get the average size of the interval, first and last
-            # probable centers of peaks
+            # Step 1: Calculate search boundaries
+            # Use average interval size to determine where peaks are expected
             avg_interval = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
             value = (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval
             first_center = intervals.nearest_interval(value)
@@ -173,8 +239,11 @@ class Data:
                 warn("In the interval based approach, the last center was seen\
                      to be too high and is set to " + str(last_center))
 
-            #step 2: find the peak position, and set the left and right bounds
-            # which are equivalent in sense to the valley points
+            # Step 2: Scan through intervals to find peaks
+            # For each interval:
+            # 1. Calculate boundaries (midpoint between current and adjacent intervals)
+            # 2. Find highest point within these boundaries
+            # 3. Store peak with its enclosing valley points
             interval = first_center
             while interval <= last_center:
                 prev_interval = intervals.prev_interval(interval)
@@ -196,21 +265,33 @@ class Data:
         if method == "interval":
             peaks = interval_peaks
 
-        # If its is a hybrid method merge the results. If we find same
-        # peak position in both results, we prefer valleys of slope-based peaks
+        #----------------------------------------
+        # Hybrid Method: Merge Results
+        #----------------------------------------
         if method == "hybrid":
-            p1 = list(slope_peaks.keys())
-            p2 = list(interval_peaks.keys())
+            # Get peak positions from both methods
+            slope_positions = list(slope_peaks.keys())      # From slope analysis
+            interval_positions = list(interval_peaks.keys()) # From interval analysis
             all_peaks = {}
-            for p in p1:
-                if (len(p2) > 0):
-                    near_index = slope.find_nearest_index(p2, p)
-                    if abs(p - p2[near_index]) < avg_interval / 2:
-                        p2.pop(near_index)
-            for p in p1:
+            
+            # Step 1: Remove interval-based peaks that are too close to slope-based peaks
+            # We prefer slope-based valleys as they're typically more precise
+            for slope_pos in slope_positions:
+                if len(interval_positions) > 0:
+                    # Find closest interval-based peak
+                    near_index = slope.find_nearest_index(interval_positions, slope_pos)
+                    # If peaks are within half an interval, consider them the same peak
+                    if abs(slope_pos - interval_positions[near_index]) < avg_interval / 2:
+                        interval_positions.pop(near_index)  # Remove duplicate peak
+            
+            # Step 2: Combine unique peaks from both methods
+            # First add all slope-based peaks
+            for p in slope_positions:
                 all_peaks[p] = slope_peaks[p]
-            for p in p2:
+            # Then add remaining interval-based peaks
+            for p in interval_positions:
                 all_peaks[p] = interval_peaks[p]
+                
             peaks = all_peaks
 
         # Finally, filter the peaks and retain eligible peaks, also get
@@ -227,34 +308,62 @@ class Data:
         peak_positions = list(peaks.keys())
         valleys = {}
         for pos in peak_positions:
-            # remember that peaks[pos][1] is left_index and
-            # peaks[pos][2] is the right_index
-            left_lobe = self.y[peaks[pos][1]:pos]
-            right_lobe = self.y[pos:peaks[pos][2]]
+            # Each peak must have balanced "lobes" (regions on either side)
+            # peaks[pos] format: [peak_amplitude, left_index, right_index]
+            left_lobe = self.y[peaks[pos][1]:pos]    # Region between left valley and peak
+            right_lobe = self.y[pos:peaks[pos][2]]   # Region between peak and right valley
+            
+            # Skip peaks with empty lobes (this shouldn't happen in practice)
             if len(left_lobe) == 0 or len(right_lobe) == 0:
                 peaks.pop(pos)
                 continue
+                
+            # Ensure peak is reasonably symmetric (within 85% difference)
+            # This helps filter out artifacts and noise
             if len(left_lobe) / len(right_lobe) < 0.15 or len(right_lobe) / len(left_lobe) < 0.15:
                 peaks.pop(pos)
                 continue
-            left_valley_pos = np.argmin(left_lobe)
-            right_valley_pos = np.argmin(right_lobe)
-            if (abs(left_lobe[left_valley_pos] - self.y[pos]) < valley_thresh and
-                abs(right_lobe[right_valley_pos] - self.y[pos]) < valley_thresh):
-                peaks.pop(pos)
+                
+            # Find the deepest points (valleys) on each side of the peak
+            left_valley_pos = np.argmin(left_lobe)    # Index of minimum in left region
+            right_valley_pos = np.argmin(right_lobe)  # Index of minimum in right region
+            # Validate peak using valley depths
+            # Both valleys must be deep enough compared to peak height
+            peak_height = self.y[pos]
+            left_valley_depth = abs(left_lobe[left_valley_pos] - peak_height)
+            right_valley_depth = abs(right_lobe[right_valley_pos] - peak_height)
+            
+            if (left_valley_depth < valley_thresh and right_valley_depth < valley_thresh):
+                peaks.pop(pos)  # Remove peaks with shallow valleys
             else:
+                # Store valid valley points with their amplitudes
+                # Convert local indices back to global indices in self.y
                 valleys[peaks[pos][1] + left_valley_pos] = left_lobe[left_valley_pos]
                 valleys[pos + right_valley_pos] = right_lobe[right_valley_pos]
 
+        #----------------------------------------
+        # Format Final Results
+        #----------------------------------------
         if len(peaks) > 0:
+            # Extract peak amplitudes from the peaks dictionary values
+            # peaks[pos] format is [amplitude, left_index, right_index]
+            # so we take the first element (amplitude) from each value
             peak_amps = np.array(list(peaks.values()))
             peak_amps = peak_amps[:, 0]
-            # hello again future me, it is given that you'll pause here
-            # wondering why the heck we index x with peaks.keys() and
-            # valleys.keys(). Just recall that pos refers to indices and
-            # not value corresponding to the histogram bin. If i is pos,
-            # x[i] is the bin value. Tada!!
-            self.peaks = {'peaks': [self.x[list(peaks.keys())], peak_amps], 'valleys': [self.x[list(valleys.keys())], list(valleys.values())]}
+            
+            # Convert array indices to actual x-values for the final result
+            # peaks.keys() and valleys.keys() are indices into self.x
+            # self.x[index] gives the actual x-value (e.g., cents in music)
+            self.peaks = {
+                'peaks': [
+                    self.x[list(peaks.keys())],    # Convert peak indices to x-values
+                    peak_amps                       # Peak amplitudes
+                ],
+                'valleys': [
+                    self.x[list(valleys.keys())],  # Convert valley indices to x-values
+                    list(valleys.values())         # Valley amplitudes
+                ]
+            }
         else:
             self.peaks = {'peaks': [[], []], 'valleys': [[], []]}
 
