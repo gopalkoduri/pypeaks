@@ -33,13 +33,25 @@ class Intervals:
 
     def nearest_interval(self, interval):
         """
-        This function returns the nearest interval to any given interval.
-        """
-        thresh_range = 25  # in cents
-        if interval < self.intervals[0] - thresh_range or interval > self.intervals[-1] + thresh_range:
-            raise IndexError("The interval given is beyond " + str(thresh_range)
-                             + " cents over the range of intervals defined.")
+        Returns the nearest defined interval to any given interval value.
+        
+        Instead of raising an error when the interval is outside the defined range,
+        this function clamps the input to the nearest valid interval. This makes
+        the function more robust when dealing with edge cases in peak detection.
 
+        Parameters
+        ----------
+        interval : float
+            The interval value to find the nearest match for (in cents)
+
+        Returns
+        -------
+        float
+            The nearest defined interval value from self.intervals
+        """
+        # Clamp the input value to the valid range of intervals
+        interval = max(self.intervals[0], min(self.intervals[-1], interval))
+        
+        # Find and return the nearest interval
         index = find_nearest_index(self.intervals, interval)
         return self.intervals[index]
-

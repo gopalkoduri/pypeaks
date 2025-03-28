@@ -223,21 +223,35 @@ class Data:
             # Intervals object required for this method
             if intervals is None:
                 raise ValueError('The interval argument is not passed.')
-            # Step 1: Calculate search boundaries
-            # Use average interval size to determine where peaks are expected
+            # Step 1: Calculate search boundaries for interval-based peak detection
+            # The algorithm needs to determine where to start and end looking for peaks
+            # based on the available intervals (e.g., musical scale degrees)
+
+            # Calculate average spacing between intervals (e.g., ~100 cents for semitones)
             avg_interval = np.average(intervals.intervals[1:] - intervals.intervals[:-1])
-            value = (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval
+
+            # Calculate the first point to start searching for peaks:
+            # - Start from minimum x value (e.g., lowest pitch in histogram)
+            # - Add 1.5 intervals worth of space for proper peak detection window
+            # - Normalize to nearest interval grid point to align with scale degrees
+            value = max(intervals.intervals[0], (min(self.x) + 1.5 * avg_interval) / avg_interval * avg_interval)
             first_center = intervals.nearest_interval(value)
-            value = (max(self.x) - avg_interval) / avg_interval * avg_interval
+
+            # Similarly calculate the last point to search for peaks:
+            # - Start from maximum x value (e.g., highest pitch in histogram)
+            # - Subtract one interval to leave room for peak detection window
+            value = min(intervals.intervals[-1], (max(self.x) - avg_interval) / avg_interval * avg_interval)
             last_center = intervals.nearest_interval(value)
+
+            # Ensure search boundaries don't exceed available intervals and warn if they were adjusted
             if first_center < intervals.intervals[0]:
                 first_center = intervals.intervals[0]
-                warn("In the interval based approach, the first center was seen\
-                    to be too low and is set to " + str(first_center))
+                warn("In the interval based approach, the first center was seen "
+                     "to be too low and is set to " + str(first_center))
             if last_center > intervals.intervals[-1]:
                 last_center = intervals.intervals[-1]
-                warn("In the interval based approach, the last center was seen\
-                     to be too high and is set to " + str(last_center))
+                warn("In the interval based approach, the last center was seen "
+                     "to be too high and is set to " + str(last_center))
 
             # Step 2: Scan through intervals to find peaks
             # For each interval:
